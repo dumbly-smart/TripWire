@@ -390,6 +390,27 @@ class ImageVerificationTests(unittest.TestCase):
             self.assertEqual(base, root / 'guest.qcow2')
             self.assertEqual(overlay, root / 'guest-phase3.qcow2')
 
+    def test_provenance_is_archived_per_overlay_without_overwriting_previous_runs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first = root / 'phase3.qcow2'
+            second = root / 'phase5.qcow2'
+
+            vm.write_provenance(root, first, {'phase3': True})
+            vm.write_provenance(root, second, {'phase5': True})
+
+            self.assertEqual(json.loads((root / 'provenance-phase3.json').read_text()),
+                             {'phase3': True})
+            self.assertEqual(json.loads((root / 'provenance-phase5.json').read_text()),
+                             {'phase5': True})
+            self.assertEqual(json.loads((root / 'provenance.json').read_text()),
+                             {'phase5': True})
+            self.assertEqual(vm.base_provenance_reference(root, first),
+                             str(root / 'provenance-phase3.json'))
+            self.assertIsNone(vm.base_provenance_reference(root, root / 'untracked.qcow2'))
+            with self.assertRaises(FileExistsError):
+                vm.write_provenance(root, first, {'phase3': 'overwrite'})
+
     def test_failed_guest_can_be_used_as_an_immutable_base_for_a_fresh_overlay(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

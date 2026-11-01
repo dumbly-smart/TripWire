@@ -283,6 +283,32 @@ def vm_disk_paths(vm_dir, reuse_guest, overlay_name=None, base_disk_name=None):
     return vm_dir / IMAGE, vm_dir / (overlay_name or 'guest.qcow2')
 
 
+def provenance_archive_path(vm_dir, disk_path):
+    """Name an immutable provenance record after the disk it describes."""
+    return Path(vm_dir) / f'provenance-{Path(disk_path).stem}.json'
+
+
+def base_provenance_reference(vm_dir, base_disk):
+    archived = provenance_archive_path(vm_dir, base_disk)
+    if archived.is_file():
+        return str(archived)
+    if Path(base_disk).name == 'guest.qcow2':
+        return str(Path(vm_dir) / 'provenance.json')
+    return None
+
+
+def write_provenance(vm_dir, overlay, provenance):
+    """Keep an immutable record for this overlay plus a latest-run pointer."""
+    vm_dir = Path(vm_dir)
+    archive = provenance_archive_path(vm_dir, overlay)
+    with archive.open('x', encoding='utf-8') as stream:
+        json.dump(provenance, stream, indent=2)
+        stream.write('\n')
+    (vm_dir / 'provenance.json').write_text(
+        json.dumps(provenance, indent=2) + '\n', encoding='utf-8')
+    return archive
+
+
 def validate_vm_resources(memory_mib, disk_gib):
     if (isinstance(memory_mib, bool) or not isinstance(memory_mib, int) or memory_mib < 1024 or
             isinstance(disk_gib, bool) or not isinstance(disk_gib, int) or disk_gib < 12):
@@ -736,7 +762,9 @@ systemctl poweroff
     provenance = {'image_url': 'https://cloud-images.ubuntu.com/releases/noble/release-20260926/' + IMAGE,
                   'image_sha256': image_hash, 'signing_fingerprint': FINGERPRINT,
                   'base_guest_disk': str(base_disk) if options.base_guest or options.base_disk_name else None,
-                  'base_guest_provenance': str(VM / 'provenance.json') if options.base_guest or options.base_disk_name else None,
+                  'base_guest_provenance': (base_provenance_reference(VM, base_disk)
+                                            if options.base_guest or options.base_disk_name
+                                            else None),
                   'qemu_version': subprocess.check_output(['qemu-system-x86_64', '--version'], text=True),
                   'qemu_acceleration': options.qemu_accel,
                   'environment_lock': environment_lock,
@@ -749,7 +777,7 @@ systemctl poweroff
                   'phase5': options.phase5, 'phase6': options.phase6, 'phase7': options.phase7,
                   'reuse_provisioned_base': reuse_provisioned_base,
                   'qemu_arguments': qemu_args, 'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()}
-    (VM / 'provenance.json').write_text(json.dumps(provenance, indent=2) + '\n')
+    write_provenance(VM, overlay, provenance)
     try:
         with (VM / 'qemu.log').open('w') as log:
             proc = subprocess.Popen(qemu_args, stdout=log, stderr=log)
