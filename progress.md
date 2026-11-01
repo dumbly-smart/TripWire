@@ -8,9 +8,9 @@ acceptance criterion is met.
 
 | Phase | Implementation | Evidence / acceptance status |
 |---|---|---|
-| 0 — scaffold and environment | VM setup, environment checks, pinned lock and reproduction entry point exist. | Accepted disposable QEMU guest on 2026-10-22. Host checks are not a substitute; this Arch development host is intentionally rejected by Ubuntu-only checks. |
-| 1 — eBPF tracer | CO-RE tracepoint programs, cgroup filter, ring buffer, loader, JSON events and loss stats exist. | Baseline guest tracer smoke accepted 2026-10-24. The smoke now also checks a positive TCP `write` on the connected socket FD; that strengthened assertion still needs a guest rerun. See `docs/notes/phase1-guest-acceptance.txt` and `docs/notes/phase1.md`. |
-| 2 — correlation | Tool-call JSONL, process ancestry join, 250 ms late-event grace, and orphan/ambiguous reporting exist. | Ten-task guest smoke accepted. Historical Phase 3 joins still had 85.71% behavioral orphan rate. |
+| 0 — scaffold and environment | VM setup, environment checks, pinned lock and reproduction entry point exist. | Fresh KVM guest acceptance passed on 2026-11-01: `make check`, all 191 unit tests, BPF smoke, and ten-task agent/join smoke. |
+| 1 — eBPF tracer | CO-RE tracepoint programs, cgroup filter, ring buffer, loader, JSON events and loss stats exist. | Fresh KVM smoke accepted 2026-11-01, including a positive TCP `write` on the connected socket FD. It emitted 231 records with zero drops. See `docs/notes/phase1-guest-acceptance.txt` and `docs/notes/phase1.md`. |
+| 2 — correlation | Tool-call JSONL, process ancestry join, 250 ms late-event grace, and orphan/ambiguous reporting exist. | Fresh ten-task guest smoke completed 2026-11-01. It assigned 428/2,206 behavioral events; 1,778 were orphaned (80.60%), with zero ambiguous events. Joining quality remains a substantial limitation. |
 | 3 — benign corpus | 34 task definitions now exist; three seeds and multiple pinned local model profiles are supported. | Only an older 30-task / 90-run corpus is measured. Tiny 0.6B profile succeeded on 15/90 tasks; four added tasks are unmeasured. Fresh corpus needed. |
 | 4 — detectors | Per-task-type allowlist, tool/syscall n-grams, held-out task split, FPR thresholds and FP-cause output exist. | Historical small-corpus metrics are generated; low utility and small calibration sets limit interpretation. |
 | 5 — injection suite | Seven local YAML cases, fake canary sink, goal recording, keyword classifier and detector integration exist. | Historical run completed seven cases but reached zero goals. No successful injection evidence; taxonomy remains pending. |
@@ -36,6 +36,30 @@ predate the sequence-padded and workspace-file-scope profiles. Do not quote
 those two runs as results for all four current strategies.
 
 ## Latest execution constraint
+
+On 2026-11-01, the committed tree at `2492d8f` passed a fresh disposable KVM
+guest acceptance run from the accepted base disk using a new qcow2 overlay.
+`make check` verified Ubuntu 24.04.5, kernel 6.8.0-146-generic, readable BTF,
+cgroup v2, clang 18.1.3, libbpf 1.3.0, and bpftool 7.4.0. All 191 unit tests
+passed. The tracer smoke emitted 231 records with zero drops, including eight
+`write` syscall events and the new TCP socket-write assertion. The ten-task
+agent smoke completed; its join report had 428 assigned and 1,778 orphaned
+behavioral events (80.60%), zero ambiguous events, and four stats records.
+These are fresh Phase 0–2 acceptance results, not a refreshed corpus.
+
+A new Phase 3 KVM run from the accepted provisioned base passed those common
+checks and reached model installation, then began fetching the pinned
+1,435 MiB model artifact. After 1 minute 43 seconds it had received about
+221 KiB, with a multi-day ETA. I stopped that throwaway VM rather than treat
+the stalled transfer as useful evidence. The runner then reported
+`RuntimeError: guest returned no result; see data/vm/serial.log` because the
+guest was intentionally terminated before the serial result marker. No task
+rows or corpus bundle were returned. A second attempt using an older saved
+model guest as the backing disk stopped before acceptance: its boot-enabled
+Tripwire service ran stale guest code and reported
+`check_env.py: error: unrecognized arguments: --lock-path config/environment.lock.json`.
+That is a base-image reuse incompatibility, not a Phase 3 outcome. Both new
+overlays remain ignored under `data/vm/`.
 
 On 2026-10-29, a fresh Phase 3 launch was attempted through the repository's
 QEMU runner with a 2,048 MiB guest. The runner refused before VM boot:

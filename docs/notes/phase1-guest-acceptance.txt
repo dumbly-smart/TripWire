@@ -45,3 +45,26 @@ configured monotonic deadline before periodic stats emission and emits a final
 record on shutdown. The final cadence check passed with two stats records in
 the short Phase 1 smoke; a regression guard rejects output substantially above
 the configured interval.
+
+## Refreshed acceptance: 2026-11-01
+
+Source commit tested: `2492d8f1f168d344c687ff81fd90a8ad8cb78f01`.
+The guest was a new KVM qcow2 overlay backed by the accepted powered-off
+Ubuntu 24.04 base. Environment: Ubuntu 24.04.5, kernel 6.8.0-146-generic,
+readable BTF, cgroup v2, clang 18.1.3, libbpf 1.3.0, bpftool 7.4.0,
+Python 3.12.3, and GNU Make 4.3.
+
+`make check` and all 191 unit tests passed. The BPF program compiled, the
+CO-RE skeleton was generated, the C loader compiled and attached, and the
+smoke completed with exit 0. The refreshed JSON summary was:
+
+```json
+{"dropped_events":0,"event_types":{"process_exit":6,"process_fork":5,"stats":3,"syscall":217},"events":231,"path_bytes":256,"poll_interval_ms":1000,"ring_buffer_bytes":16777216,"sequence_last":231,"syscalls":{"clone":5,"connect":3,"execve":6,"openat":192,"renameat2":1,"sendto":1,"unlinkat":1,"write":8}}
+```
+
+The updated TCP assertion passed: a positive metadata-only `write` was
+observed on the same socket file descriptor that had connected to the local
+sink. The smoke does not capture the write buffer or socket payload. The
+separate ten-task agent/join smoke also passed as a harness acceptance check;
+its high orphan-event rate is documented in `progress.md` and `reports.md`.
+Full raw event files remain ignored under `data/vm/`.

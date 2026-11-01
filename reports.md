@@ -133,6 +133,31 @@ It verified the same cached model and reached `phase3-corpus`, then the runtime
 guard stopped it at 2,020/2,048 MiB available. It returned no task row or result
 bundle, so the lower context's effect on task utility remains unknown.
 
+## Fresh Phase 0–2 acceptance (2026-11-01)
+
+Source commit `2492d8f` passed in a new KVM overlay over the accepted Ubuntu
+24.04.5 guest. `make check` verified kernel `6.8.0-146-generic`, readable BTF,
+cgroup v2, clang 18.1.3, libbpf 1.3.0, and bpftool 7.4.0. All 191 unit tests
+passed. The tracer smoke recorded 231 output records, 217 syscall records,
+zero dropped events, and eight `write` syscalls; the updated smoke also
+asserted a successful TCP write using the FD that had connected to the local
+sink. The ten-task agent smoke completed and logged 11 tool calls. Its report
+assigned 428 of 2,206 behavioral events and orphaned 1,778 (80.60%); there
+were no ambiguous events and four stats snapshots. This demonstrates current
+guest build/runtime acceptance while confirming that event-to-call joining
+still loses many events.
+
+A fresh Phase 3 attempt reached model installation, but its 1,435 MiB model
+download had transferred only about 221 KiB after 1 minute 43 seconds. The
+disposable guest was stopped before it returned a result marker; this produced
+no task measurements and must not be added to corpus statistics. The serial
+transfer failure after stopping it is `RuntimeError: guest returned no result;
+see data/vm/serial.log`. A separate attempt from an older saved model guest
+failed before acceptance because that image booted a stale enabled Tripwire
+service, which printed `check_env.py: error: unrecognized arguments:
+--lock-path config/environment.lock.json`. These are runner/image setup
+failures; neither changes the historical Phase 3–7 result table above.
+
 ## Reproduce or refresh reports
 
 Use the commands in `README.md` and `scripts/reproduce.sh` from a host with

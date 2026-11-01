@@ -76,6 +76,18 @@ remain ambiguous by design.
 - Shell confinement relies on the disposable guest boundary. The file tools
   themselves reject absolute paths, `..` escapes, and symlink escapes.
 
+## Refreshed guest smoke: 2026-11-01
+
+The fresh KVM acceptance guest completed all ten scripted tasks and logged 11
+tool calls. Its event stream contained 2,206 behavioral events and four stats
+snapshots. The join assigned 428 events, orphaned 1,778 (80.60%), and marked
+none ambiguous. The task driver and local HTTP fixture completed successfully;
+the smoke is a harness test, not a model-driven corpus measurement. The high
+orphan count remains expected to include agent startup and cgroup supervisor
+activity; it also shows that the present joiner does not yet provide the
+near-complete per-tool attribution desired for research analysis. Raw artifacts
+are preserved under ignored `data/vm/phase2-*` files.
+
 ## What to learn
 
 - `clock_gettime(2)`, CLOCK_MONOTONIC: use one monotonic clock for userspace
