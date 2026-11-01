@@ -114,9 +114,10 @@ against a 3,072 MiB requirement. Neither run emitted the result metadata
 marker, task rows, or a complete artifact bundle. Since both were terminated
 by a host safety check, they say nothing about task success or model output.
 Together with the completed 1 GiB diagnostic's 0/1 task success, the runs show
-that the current host cannot provide enough sustained memory to test whether
-extra guest RAM improves TCG inference. Preserve these interrupted overlays
-and treat the Phase 3 corpus as pending.
+that the current host could not provide enough sustained memory to test whether
+extra guest RAM improves TCG inference. Preserve these interrupted overlays.
+The later full KVM corpus is documented in `docs/notes/phase3.md`; these older
+TCG attempts remain incomplete and are not part of that corpus.
 
 One more diagnostic tried to reduce inference memory with a separate
 512-token-context profile, keeping the same model/runtime lock, 128-token

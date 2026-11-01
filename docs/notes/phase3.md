@@ -205,8 +205,9 @@ or a complete artifact bundle. They add no utility, behavior, or detector
 measurements. The low-context profile is preserved for reproducibility, but
 its effect on model output remains unknown. The 1 GiB diagnostic profile and
 this profile are troubleshooting configurations, not substitutes for the
-research model or corpus. Phase 3 remains pending until a host can sustain the
-guest memory guard and return complete results.
+research model or corpus. These interrupted attempts were superseded by the
+complete KVM corpus recorded in the next section; their missing bundles still
+provide no task measurements.
 
 ## Completed KVM corpus: 2026-11-01
 

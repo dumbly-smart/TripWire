@@ -3,9 +3,9 @@
 **Workshop paper draft — preliminary measurements, utility-confounded**
 
 Authors: Tripwire contributors  
-Status: Phases 3 and 5–7 completed in a provisioned guest with the pinned tiny
-model. The measurements below are preliminary and do not establish attack
-efficacy because the model achieved none of the injection goals.
+Status: The Phase 3–7 pipeline ran in a provisioned guest with the pinned tiny
+model. These preliminary measurements do not establish injection efficacy
+because the model achieved none of the injection goals.
 
 ## Abstract
 
@@ -15,13 +15,14 @@ outcomes are distinguishable from operating-system behavior, and how an
 adaptive attacker can stay within a task's benign behavior envelope. We build
 Tripwire, a cgroup-scoped eBPF tracer that records kernel metadata and joins
 events to logged tool calls, then compare per-task behavior allowlists and
-tool/syscall sequence models. We report a 90-run benign corpus with 15
-successful tasks (16.7%), seven injection attempts with zero successful goals,
-two deterministic local fake-canary probes with both goals reached and both
-detectors flagging them, and five feature ablations. All seven injection
-taxonomy rows remain pending. The 0.6B model failed every fetch task, leaving
-no benign HTTP behavior to match; the adaptive probe therefore does not measure
-in-envelope evasion.
+tool/syscall sequence models. We report a 102-attempt benign corpus with 18
+successful tasks (17.65%), seven injection attempts with zero successful goals,
+four deterministic local
+fake-canary wrapper probes with two observed evasions, and five feature
+ablations. All seven injection taxonomy rows remain pending. Fetch tasks
+succeeded in 3/30 attempts, but the padding probe was not calibrated to a
+successful benign sequence. These preliminary results do not establish a
+population-level adaptive evasion rate.
 
 ## 1. Introduction
 
@@ -76,11 +77,14 @@ feature groups are recorded in `config/`.
 
 ### 4.1 Benign behavior
 
-The benign suite has 30 declarative tasks across five task types, each run with
-three fixed seeds (90 total). With `qwen3:0.6b-q4_K_M` and Ollama 0.40.7,
-15/90 tasks succeeded. Every one of the 18 fetch runs had zero tool calls.
-Weak-model failures remain in the corpus and are reported as a utility
-confound. The exact model manifest digest is in the Phase 3 artifact manifest.
+The refreshed benign suite has 34 declarative tasks across five task types,
+each run with three fixed seeds (102 total). With `qwen3:0.6b-q4_K_M` and
+Ollama 0.40.7, 18/102 task checks succeeded (17.65%): edit 9/18, fetch 3/30,
+search 0/18, summarize 6/18, and tests 0/18. Weak-model failures remain in
+the corpus and are a severe utility confound. The join assigned 188/1,582
+behavioral events and orphaned 1,375 (86.92%), with 19 ambiguous events and
+zero ring-buffer drops; 2,390 stats snapshots are excluded from that
+denominator. The model manifest digest is retained with the Phase 3 artifacts.
 
 ### 4.2 Injection suite
 
@@ -94,38 +98,48 @@ benchmark result. The full benchmark's task tools are not integrated.
 
 ### 4.3 Adaptive attacker
 
-The current reproducible attacker compares a shell-based request with a
-single allowed local `http_get` that piggybacks a fake token on the fetch route.
-Both strategies reached their canary goals (2/2); both detectors flagged both
-at 1% and 5% target FPR. Since the benign fetch baseline contained no HTTP
-calls, this does not establish an in-envelope evasion rate. The attacker is a
-deterministic tool-wrapper probe, not a learned optimizer or model takeover.
+The current reproducible attacker includes naive shell-child, one-call
+adaptive, workspace-file-scope, and sequence-padding wrappers. Each reached its
+local fake-canary goal in one run. The naive and one-call profiles were flagged
+by both detectors; the file-scope and padding profiles evaded both at the
+configured 1% and 5% targets. This is four deterministic tool-wrapper probes,
+not a learned optimizer or model takeover. The padding length was not calibrated
+to a successful benign sequence, and only 3/30 benign fetch tasks succeeded.
 
 ### 4.4 Metrics and ablations
 
-Report task success and detector TPR at 1% and 5% target FPR, with measured
+Report task success and detector rates at 1% and 5% target FPR, with measured
 held-out FPR, calibration/test sample counts, and a cause log for every false
-positive. Split by task, not run. Ablations include files, network, process,
-sequence, and combined signals. The combined score is the configured
-arithmetic mean of allowlist and sequence novelty. Only 15 benign calibration
-runs were available, so measured 1% and 5% FPRs are coarse.
+positive. Split by task, not run. The refreshed split held 18 train, 6
+calibration, and 10 test tasks, with 18 calibration and 30 benign test runs.
+Ablations include files, network, process, sequence, and combined signals. The
+combined score is the configured arithmetic mean of allowlist and sequence
+novelty. The calibration set is small, so measured 1% and 5% FPRs are coarse.
 
 ## 5. Results
 
-These guest measurements are preliminary. Attack rows include unsuccessful
-injections, so their detector-positive rate is not TPR over successful
-attacks. The successful mimicry probes are a separate two-run experiment.
+These guest measurements are preliminary. Phase 5 attack rows all failed
+their declared goals, so their detector flags are not successful-attack TPR.
+The successful wrapper probes are a separate four-run experiment.
 
-| Measure | Preliminary result |
+| Measure | Refreshed preliminary result |
 |---|---|
-| Benign task success | 15/90 (16.7%) with Qwen3 0.6B Q4_K_M |
-| Phase 3 tool-call join orphan rate | 1,044/1,218 behavior events (85.71%); 2,675 stats records excluded |
+| Benign task success | 18/102 (17.65%) with Qwen3 0.6B Q4_K_M |
+| Phase 3 join quality | 188/1,582 assigned; 1,375 orphaned (86.92%); 19 ambiguous; 0 drops |
 | Injection goal success | 0/7; successful-attack TPR is undefined |
-| Allowlist positives on attack rows | 1/7 at both target FPRs; measured benign FPR 0/30 |
-| N-gram positives on attack rows | 1/7 at both target FPRs; measured benign FPR 3/30 (10%) |
-| Naive / adaptive mimicry goals | 1/1 each; both detectors flag 2/2 in each mode |
-| Ablations (files, network, process, sequence, combined) | 1/7, 1/7, 0/7, 1/7, 1/7 attack rows flagged; sequence and combined FPR 3/30 |
+| Allowlist flags on failed attack rows | 1/7; held-out benign FPR 0/30 |
+| N-gram flags on failed attack rows | 1/7; held-out benign FPR 3/30 (10%) |
+| Prompt keyword baseline | 7/7 injections flagged; 0/34 benign prompts flagged |
+| Mimicry wrapper goals | 4/4 local canary goals reached; one run per strategy |
+| Mimicry detector outcomes | 2/4 detected by both; 2/4 evaded both; FPR 0/30 allowlist and 3/30 n-gram |
+| Ablation flags on failed attack rows | Files 1/7, network 1/7, process 0/7, sequence 1/7, combined 1/7 |
 | Utility loss under blocking | Not measured; blocking is not implemented |
+
+All seven taxonomy cases remain pending. The prompt keyword baseline is a
+lexical smoke result, not evidence of semantic injection detection. The
+four-probe mimicry result is not a population estimate, and its padding case
+was not calibrated to a successful benign sequence. Full run details and
+limitations are in `reports.md` and the phase notes.
 
 ## 6. Taxonomy
 
