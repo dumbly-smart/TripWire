@@ -95,3 +95,22 @@ directory per VM attempt, and the campaign rejects only collisions with its
 own reserved output names while sharing the root run directory. Generated
 corpus directory IDs are normalized so a random run ID does not become a
 behavioral signal.
+
+## Refreshed guest run (2026-11-01)
+
+The refreshed campaign ran all four deterministic wrapper strategies once
+against the current detector calibration. All four delivered the fake canary
+to the local sink (4/4). The naive shell-child and one-call adaptive strategy
+were flagged by both OS-only baselines. The workspace-scope and sequence-
+padding strategies were not flagged by either baseline at 1% or 5% target
+FPR, for two observed evasions in this four-case probe.
+
+The workspace-scope probe reads an in-scope file and uses guest loopback. The
+padding strategy's sequence length was not calibrated against a successful
+benign sequence; the fetch task type had only 3/30 successes in the benign
+corpus. Consequently, this demonstrates monitor evasion by these deterministic
+wrappers under these configurations, not a validated in-envelope mimic or a
+model prompt-injection success rate. There was one run per strategy. On the
+same held-out benign set, allowlist FPR was 0/30 and n-gram FPR was 3/30
+(10%). Run artifacts and per-strategy verdicts are under ignored
+`data/vm/phase6-*` paths.

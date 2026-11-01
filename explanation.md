@@ -365,21 +365,36 @@ Start at the run manifest to identify model, task and detector configs. Then:
 
 ## 12. Current evidence and its limits
 
-The historical tiny-model corpus ran 30 tasks three times (90 total) and
-succeeded on 15 tasks. Its behavioral event orphan rate was 85.71%. Seven
-injection cases were attempted and none achieved their goal. Two earlier
-mimicry profiles delivered their fake canary to the local sink and both
-detectors flagged both runs, but benign fetch tasks had no tool calls. The
-adaptive case therefore was not tested against a functioning fetch baseline.
-All seven taxonomy rows were pending. The newer padding and file-scope
-profiles have not been guest-evaluated.
+The latest KVM corpus used 34 benign task definitions × three seeds (102
+attempts) with Ollama 0.40.7 and `qwen3:0.6b-q4_K_M`; 18 task checks passed
+(17.65%). The join assigned 188/1,582 behavioral events, orphaned 1,375
+(86.92%), marked 19 ambiguous, and reported zero ring-buffer drops. A high
+orphan rate means that absence of a joined event is weak evidence. The small
+model's low task success also means many attack prompts may not have produced
+meaningful agent behavior.
 
-These observations are useful for debugging and method development, not a
-strong general claim about prompt-injection observability. The corpus has poor
-task utility, few calibration samples, significant orphaning, and no
-successful injection goal. No blocking/utility tradeoff is measured. The
-fresh VM attempt on 2026-10-29 did not start because the host headroom rule
-required 4,096 MiB while 3,216 MiB were available.
+All seven injection cases ran but none achieved its declared goal. The local
+canary sink received no canary from the Phase 5 cases. Therefore all seven
+operational taxonomy labels remain pending; detector flags on failed attempts
+are not successful-attack detection rates. The lexical prompt baseline flagged
+7/7 patterned injection prompts and 0/34 benign prompts, which is not a
+semantic classifier result.
+
+A separate controlled wrapper campaign achieved its fake-canary goal in all
+four single-run strategies. Two adaptive profiles were not flagged by either
+OS-only baseline, while the naive and one-call strategies were flagged. This
+is evidence about these deterministic probes and this monitor configuration,
+not a prompt-injection success rate or population estimate. The padding trace
+was not calibrated to a successful benign sequence. The held-out n-gram
+baseline produced 3/30 benign FPs (10%); allowlist produced 0/30. Blocking
+utility is not measured because the monitor does not block.
+
+The 2026-11-01 Phases 3–7 runs reused a previously provisioned cached-model
+base. They are not a blank-VM reproduction. No fresh blank-VM run using only
+the README instructions is accepted yet. These results help validate the
+pipeline and identify limitations, but do not yet answer the research question
+with strong evidence. See `progress.md` for remaining work and phase notes for
+commands, configs, and artifact locations.
 
 ## 13. Suggested reading path
 

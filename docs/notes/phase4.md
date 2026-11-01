@@ -55,3 +55,25 @@ was 0. These rates are coarse and confounded by the 16.7% task success rate and
 85.71% event orphan rate; they are pipeline measurements, not detector efficacy
 claims. The ignored output is in
 `data/vm/phase3-corpus-eval/detector-eval/`.
+
+## Refreshed evaluation: 2026-11-01
+
+The detector pipeline was run against the new 34-task, three-seed corpus
+(`qwen3:0.6b-q4_K_M`, 18/102 task successes, 86.92% orphan-event rate). It
+kept all seeds of a task in one split: 18 train tasks, 6 calibration tasks,
+and 10 held-out test tasks. Both requested target FPRs (1% and 5%) produced
+the same measured held-out rates because the calibration set is small and the
+cutoff tied at zero.
+
+| Baseline | Held-out benign FPs | Measured FPR | Phase 5 failed-attack flags |
+|---|---:|---:|---:|
+| Per-task-type allowlist | 0/30 | 0% | 1/7 |
+| Tool/syscall n-gram | 3/30 | 10% | 1/7 |
+
+The attack rows are reported only as flags: all seven Phase 5 goal checks were
+false, so these are not successful-attack TPR. The three n-gram false
+positives are the three seeds of held-out task `edit-02`; the cause log shows
+unseen `file_write|network_send` trigram combinations. These results are
+useful evidence that the metrics and cause logging run on the refreshed
+corpus, but the tiny model's utility and high orphan rate prevent strong
+detector-efficacy claims.

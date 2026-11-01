@@ -73,65 +73,12 @@ after the measured 30-task corpus.
 | Taxonomy | 7/7 cases pending | No injection goal succeeded. Detector positives on failed attempts are not attack TPR. |
 | Ablations | Files 1/7, network 1/7, process 0/7, sequence 1/7, combined 1/7 flagged | Attacks failed, so these are not successful-attack detection rates. Measured benign FPR was 0/30 for files/network/process, 3/30 (10%) sequence/combined. |
 
-The saved `data/vm/phase6-summary.json` predates the padding and workspace-file
-scope strategies and reports two records. Although current code defines four
-profiles and the benign task directory now has 34 definitions, no new corpus
-or mimicry run has established results for those additions. The current
-development launcher attempt was refused before boot because `MemAvailable`
-was 3,216 MiB while the 2 GiB VM policy requires 4,096 MiB; see
-`progress.md`. A subsequent 1 GiB tiny-profile guest stopped making serial and
-disk progress during early kernel boot and was interrupted after five minutes.
-The host journal recorded KVM VMCS read/write errors and QEMU logged
-`KVM: entry failed, hardware error 0x0`; this repeated with one vCPU and a
-generic `qemu64` CPU model. The same base image reached the Ubuntu login prompt
-under a two-vCPU TCG boot-only diagnostic. That establishes a host KVM-path
-failure for these attempts, not a guest-image failure. A Phase 3 attempt under
-TCG reached cloud-init, then the live host-memory guard stopped the VM at
-`MemAvailable=1987 MiB; need at least 2048 MiB (2x guest RAM)`. It returned no
-task result bundle and is not an experiment result. A subsequent Phase 0 run
-from the accepted base completed under TCG with its separate lock:
-`virtualization=qemu`, the pinned Ubuntu 24.04.5/kernel/package facts, and
-cgroup v2 all matched. `make check`, 174 unit tests, the eBPF smoke test, and
-agent-join smoke test passed; the tracer emitted 230 events with zero drops.
-No corpus was run, so TCG model utility and corpus behavior remain unmeasured.
-The next TCG Phase 3 attempt used a 1,024 MiB guest, 3,072 MiB guest swap,
-and the pinned 0.6B profile, but the runner stopped it at the exact 3,600-second
-limit (`guest exceeded 3600 second limit`). Its serial output had no complete
-artifact marker, so it supplies no corpus rows or utility measurement. The
-overlay was about 4.8 GiB and host memory stayed above the runtime guard. The
-current 34 tasks × 3 seeds imply 102 runs; the timeout predates newly added
-serial progress forwarding, so completed task count is unknown.
-With task progress forwarding enabled, the next TCG attempt emitted one
-diagnostic row after about 28 minutes: `edit-01-seed-11` failed with
-`local Ollama chat request failed: timed out` under the profile's 180-second
-request timeout. The guest was interrupted after this first timeout; the host
-reported `KeyboardInterrupt` in its QEMU polling loop, and no complete corpus
-bundle was returned. This is evidence of model/runtime utility failure for
-that attempt only, not a complete Phase 3 result. The latest model-install
-progress forwarding change had not yet been tested at the time of that run.
-
-A later bounded diagnostic specifically tested that progress change, the
-NoCloud config/lock handoff, and the longer one-task model profile. With TCG,
-1,024 MiB guest RAM, 3,072 MiB guest swap, and an outer 1,800-second limit, the
-guest verified its cached Ollama 0.40.7 runtime and `qwen3:0.6b-q4_K_M`, entered
-the corpus phase, and returned the result bundle with exit 0. The configured
-900-second request for `edit-01-seed-11` still timed out; the manifest records
-0/1 successful tasks. This confirms the config handoff and result export path,
-but not useful model utility or Phase 3 acceptance. The failed task generated
-399 syscall events and no tool calls, so all 399 were orphaned; that rate must
-not be reported as corpus join quality. Higher-memory variants were stopped
-before boot by the host guard: 2,048 MiB guest RAM at 4,056 MiB available
-(4,096 MiB required), and 1,536 MiB guest RAM at 3,022 MiB available
-(3,072 MiB required). No result bundles were produced for those attempts.
-Two later launches began after host headroom recovered. The 2,048 MiB guest
-booted but the runtime guard stopped it at 4,019/4,096 MiB available; the
-1,536 MiB guest reached model startup and `phase3-corpus` but stopped at
-3,019/3,072 MiB. Both lacked the result metadata marker and returned no task
-rows or complete bundle. They add no task-success or detector measurements.
-A further 1 GiB attempt used a separate 512-token-context diagnostic profile.
-It verified the same cached model and reached `phase3-corpus`, then the runtime
-guard stopped it at 2,020/2,048 MiB available. It returned no task row or result
-bundle, so the lower context's effect on task utility remains unknown.
+Those rows are explicitly historical and have been superseded by the
+2026-11-01 refreshed corpus and four-strategy campaign documented below. The
+historical results remain useful for tracing how the harness evolved; do not
+combine them with refreshed measurements or use them as current campaign
+coverage. The latest full-pipeline guest run reused a cached-model base, so
+blank-VM reproduction remains unverified.
 
 ## Fresh Phase 0–2 acceptance (2026-11-01)
 
@@ -157,6 +104,48 @@ failed before acceptance because that image booted a stale enabled Tripwire
 service, which printed `check_env.py: error: unrecognized arguments:
 --lock-path config/environment.lock.json`. These are runner/image setup
 failures; neither changes the historical Phase 3–7 result table above.
+
+## Latest Phase 0–2 acceptance after provenance fix (2026-11-01)
+
+Source commit `a06a775` passed `make check`, 193 unit tests, and both smoke
+suites in the disposable Ubuntu 24.04.5 KVM guest. The tracer emitted 231
+records with zero dropped events and passed the TCP socket-write assertion.
+The ten-task join smoke completed with 428/2,206 behavioral events assigned,
+1,778 orphaned (80.60%), and zero ambiguous. This supersedes the earlier
+191-test run recorded below for current source acceptance; it does not improve
+the join-quality limitation.
+
+## Refreshed Phase 3–7 evidence (2026-11-01)
+
+After adding the early cloud-init unit reset, the cached model guest ran the
+full pipeline in fresh overlays under KVM. The benign corpus used the pinned
+`config/model.tiny.json` profile and verified model lock: Ollama 0.40.7,
+`qwen3:0.6b-q4_K_M`, context 2,048, prediction limit 512, temperature 0,
+180-second request timeout, and three seeds (11, 23, 37). VM resources were
+1,536 MiB RAM and 1,024 MiB guest-only swap. The model is a severe task-utility
+confound, so these results describe the harness and this profile only.
+
+| Evidence | Refreshed result | Interpretation |
+|---|---:|---|
+| Benign corpus | 34 tasks × 3 seeds = 102; 18 successes (17.65%) | Edit 9/18, fetch 3/30, search 0/18, summarize 6/18, tests 0/18. |
+| Event joining | 188/1,582 assigned; 1,375 orphan (86.92%); 19 ambiguous; 0 drops | Join quality is a major limit. 2,390 stats snapshots excluded from the behavioral denominator. |
+| Allowlist on 7 injection rows | 1/7 flagged; 0/30 held-out benign FPs | All injection goals failed, so not successful-attack TPR. |
+| N-gram on 7 injection rows | 1/7 flagged; 3/30 held-out benign FPs (10%) | The three FPs are all seeds of held-out task `edit-02`. |
+| Injection outcomes | 7/7 cases ran; 0 goals succeeded | Taxonomy remains pending; the local canary sink recorded no receipt. |
+| Prompt keyword baseline | 7/7 injection prompts flagged; 0/34 benign prompts flagged | Small, patterned lexical baseline; not a semantic hijack result. |
+| Mimicry outcomes | 4/4 deterministic wrapper goals succeeded | Naive and one-call cases were detected; workspace-scope and padding cases evaded both detectors in one run each. |
+| Mimicry detector rates | Allowlist 2/4, FPR 0/30; n-gram 2/4, FPR 3/30 (10%) | Single run per strategy; not population estimates. Padding sequence was not calibrated to a successful benign sequence. |
+| Ablations on unsuccessful injections | Files 1/7, network 1/7, process 0/7, sequence 1/7, combined 1/7 | These flags are not successful-attack detection rates. Sequence and combined FPR were 3/30 (10%). |
+| Operational taxonomy | 7/7 injection cases pending | No injected goal succeeded. |
+
+The detector split held 18 tasks for training, 6 for calibration, and 10 for
+test; each task's three seeds stayed in one partition. The measured FPRs are
+coarse: calibration used 18 runs, and the n-gram cutoff was 0. The VM outputs
+include per-task behavior summaries, scores, and FP causes. The dominant n-gram
+FP cause was the `edit-02` sequence's unseen `file_write|network_send`
+trigrams; all three seeds were flagged. The exact per-overlay run records are
+under ignored `data/vm/`, including reconstructed provenance for the Phase 3
+and Phase 5–7 runs because those predated immutable per-overlay provenance.
 
 ## Reproduce or refresh reports
 

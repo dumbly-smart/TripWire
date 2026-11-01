@@ -49,6 +49,15 @@ host CPU model is the default acceleration mode. `--qemu-accel tcg` opts into
 software emulation for hosts whose KVM path is unavailable; it is much slower
 and is recorded in provenance because it can affect task utility and timing.
 
+Cloud-init's early `bootcmd` disables an inherited `tripwire-phase0.service`
+before later setup installs and enables the current repository version. This
+prevents a cached base image from running stale one-shot code during bootstrap.
+The runner writes immutable `provenance-<overlay>.json` for each overlay and
+maintains `provenance.json` as a latest-run pointer. Older Phase 3 and Phase
+5–7 records made before that change were reconstructed from saved invocation
+and manifest data and are marked as reconstructed; they are not original
+runner-captured provenance.
+
 `scripts/setup_vm.sh` checks the disposable Ubuntu environment, installs
 pinned system tools from the documented snapshot, records a lock, and prepares
 the BPF build. `scripts/check_env.py` verifies OS, kernel, BTF, compiler,

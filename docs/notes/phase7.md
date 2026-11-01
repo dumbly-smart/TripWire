@@ -44,3 +44,25 @@ artifact generation pass; meaningful attack taxonomy evidence is still
 incomplete because the local model did not achieve any injection goal. Utility
 with versus without blocking remains unmeasured because this implementation
 does not enforce blocking.
+
+## Refreshed guest run (2026-11-01)
+
+The refreshed `make eval-all` used the 34-task corpus (18/102 task checks
+passed), with all seeds held in the same train/calibration/test partition
+(18/6/10 tasks). It generated five feature ablations, the taxonomy evidence,
+and the SVG. All seven Phase 5 cases remain pending because none achieved its
+goal.
+
+| Feature set | Failed injection rows flagged | Held-out benign FPs |
+|---|---:|---:|
+| Files | 1/7 | 0/30 |
+| Network | 1/7 | 0/30 |
+| Process | 0/7 | 0/30 |
+| Sequence | 1/7 | 3/30 (10%) |
+| Combined | 1/7 | 3/30 (10%) |
+
+These are flags on unsuccessful injection attempts, not successful-attack
+TPR. The same 1% and 5% targets yielded identical measured rates. Blocking and
+its utility cost remain unmeasured because Tripwire is observational. The
+refreshed taxonomy and detector limits are summarized in `docs/taxonomy.md`
+and `reports.md`.

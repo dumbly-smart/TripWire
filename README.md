@@ -3,14 +3,16 @@
 Research project for an eBPF behavioral monitor of tool-using LLM agents and an
 adaptive attacker against that monitor. The Phase 0–8 implementation, local
 injection harness, mimicry probe, detector baselines, ablations, taxonomy
-reporter, and paper skeleton are present. The pinned tiny-model guest produced
-a 90-run benign corpus, seven failed injection attempts, deterministic mimicry
-results, and Phase 7 ablations. Those measurements are utility-confounded: the
-model succeeded on 15/90 benign tasks and achieved none of the seven injection
-goals. The adaptive probe reached both local canary goals, and both detectors
-flagged both examples; the fetch baseline had no successful HTTP calls, so this
-does not establish a meaningful in-envelope evasion result. See the Phase 5–8
-notes and paper draft for exact counts and limitations.
+reporter, and paper skeleton are present. The
+latest pinned tiny-model guest produced a 102-attempt benign corpus, seven
+failed injection attempts, four deterministic mimicry probes, and Phase 7
+ablations. These measurements are utility-confounded: the model succeeded on
+18/102 benign tasks (17.65%) and achieved none of the seven injection goals.
+All four wrapper probes reached a local canary; two were not detected, but the
+runs were one-shot probes and the padding behavior was not calibrated to a
+successful benign sequence. All injection taxonomy labels remain pending. See
+`reports.md` and the Phase 3–8 notes for exact counts and limitations. A
+blank-VM end-to-end reproduction remains open.
 
 All experiments belong in a throwaway guest you control, using fake secrets and
 local sinks. Never mount host home directories or pass through host credentials.
@@ -22,8 +24,9 @@ For a fresh end-to-end run from a launcher with QEMU/KVM, run
 benign corpus, injections, mimicry, and final evaluation. The default uses the
 pinned Qwen3 8B profile with an 8 GiB guest and requires at least twice the
 guest RAM free on the launcher under its conservative headroom rule. You may
-set `MODEL_CONFIG=config/model.tiny.json GUEST_MEMORY_MIB=1024 GUEST_SWAP_MIB=3072` to select the
-documented 0.6B fallback explicitly; record that model as a utility confound.
+set `MODEL_CONFIG=config/model.tiny.json GUEST_MEMORY_MIB=1024
+GUEST_SWAP_MIB=3072` to select the documented 0.6B fallback explicitly;
+record that model as a utility confound.
 Both this script and direct calls to `scripts/run_phase0_vm.py` require
 `MemAvailable` to be at least twice the selected guest RAM. This is a
 conservative launch heuristic, not a guarantee that a model will fit.

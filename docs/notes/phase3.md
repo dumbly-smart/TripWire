@@ -207,3 +207,32 @@ its effect on model output remains unknown. The 1 GiB diagnostic profile and
 this profile are troubleshooting configurations, not substitutes for the
 research model or corpus. Phase 3 remains pending until a host can sustain the
 guest memory guard and return complete results.
+
+## Completed KVM corpus: 2026-11-01
+
+After KVM became usable and the cached model disk was bootstrapped with current
+repo code, the full corpus completed in a fresh overlay. The early 2 GiB retry
+was stopped by the live host guard at 39/102 runs (`MemAvailable=4055 MiB`,
+4,096 MiB required); it returned no result bundle. The completed run used KVM,
+1,536 MiB guest RAM, 1,024 MiB guest-only swap, a 16 GiB overlay, 34 tasks,
+seeds 11/23/37, and source commit `32841f8`. It verified model lock
+`config/model.tiny.lock.json` for Ollama 0.40.7 and
+`qwen3:0.6b-q4_K_M`. Generation settings were temperature 0, context 2,048,
+512 predicted tokens, 180-second request timeout, and keep-alive 0.
+
+The corpus manifest contains 102 rows and 18 successful task checks (17.65%).
+By task type, success was edit 9/18, fetch 3/30, search 0/18, summarize 6/18,
+and tests 0/18. The model utility rate is a severe confound; retain failed
+attempts in all later analyses. Fetch has only three successes, with mean
+sequence length 0.47, and search/tests have no successful calls. The per-type
+summary is present in `data/vm/phase3-summary.json`.
+
+The joiner assigned 188 of 1,582 behavioral events, orphaned 1,375 (86.92%),
+and marked 19 ambiguous. It recorded zero ring-buffer drops; 2,390 stats
+snapshots are excluded from the behavioral denominator. This is measured join
+quality for this workload, not a causal syscall-to-tool ground truth. The full
+manifest, runs, calls, events, joined rows, orphan rows, summary, and verified
+model lock are under ignored `data/vm/phase3-*` files. The provenance record
+was reconstructed from the launcher command and manifest because earlier
+runner versions overwrote the single provenance pointer; it is marked as
+reconstructed in the file.

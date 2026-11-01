@@ -8,32 +8,32 @@ acceptance criterion is met.
 
 | Phase | Implementation | Evidence / acceptance status |
 |---|---|---|
-| 0 — scaffold and environment | VM setup, environment checks, pinned lock and reproduction entry point exist. | Fresh KVM guest acceptance passed on 2026-11-01: `make check`, all 191 unit tests, BPF smoke, and ten-task agent/join smoke. |
-| 1 — eBPF tracer | CO-RE tracepoint programs, cgroup filter, ring buffer, loader, JSON events and loss stats exist. | Fresh KVM smoke accepted 2026-11-01, including a positive TCP `write` on the connected socket FD. It emitted 231 records with zero drops. See `docs/notes/phase1-guest-acceptance.txt` and `docs/notes/phase1.md`. |
-| 2 — correlation | Tool-call JSONL, process ancestry join, 250 ms late-event grace, and orphan/ambiguous reporting exist. | Fresh ten-task guest smoke completed 2026-11-01. It assigned 428/2,206 behavioral events; 1,778 were orphaned (80.60%), with zero ambiguous events. Joining quality remains a substantial limitation. |
-| 3 — benign corpus | 34 task definitions now exist; three seeds and multiple pinned local model profiles are supported. | Only an older 30-task / 90-run corpus is measured. Tiny 0.6B profile succeeded on 15/90 tasks; four added tasks are unmeasured. Fresh corpus needed. |
-| 4 — detectors | Per-task-type allowlist, tool/syscall n-grams, held-out task split, FPR thresholds and FP-cause output exist. | Historical small-corpus metrics are generated; low utility and small calibration sets limit interpretation. |
-| 5 — injection suite | Seven local YAML cases, fake canary sink, goal recording, keyword classifier and detector integration exist. | Historical run completed seven cases but reached zero goals. No successful injection evidence; taxonomy remains pending. |
-| 6 — adaptive mimicry | Four deterministic profiles and per-strategy reporting exist. | Historical guest run measured two earlier profiles only. New padding/scope profiles have not been evaluated against a corpus containing their matching tasks. |
-| 7 — taxonomy and ablations | Operational taxonomy, five feature ablations, metrics and SVG plot generation exist. | Historical outputs generated. All seven taxonomy cases were pending because their goals failed; blocking utility is not measured. |
-| 8 — release and writeup | README, license, VM reproduction script, environment/threat-model docs and paper skeleton exist. | Clean fresh-launcher reproduction with successful injections and refreshed Phase 3/6 evidence remains open. |
+| 0 — scaffold and environment | VM setup, environment checks, pinned lock and reproduction entry point exist. | Fresh KVM acceptance on 2026-11-01: `make check`, all 193 tests, BPF smoke, and ten-task agent/join smoke passed. |
+| 1 — eBPF tracer | CO-RE tracepoint programs, cgroup filter, ring buffer, loader, JSON events and loss stats exist. | Fresh smoke emitted 231 records with zero drops and passed the connected TCP socket `write` assertion. |
+| 2 — correlation | Tool-call JSONL, process ancestry join, 250 ms late-event grace, and orphan/ambiguous reporting exist. | Ten-task smoke assigned 428/2,206 behavioral events; 1,778 were orphaned (80.60%), with zero ambiguous events. Joining quality remains a major limitation. |
+| 3 — benign corpus | 34 task definitions; three seeds and pinned local model profiles. | Fresh 34-task × 3-seed corpus completed: 18/102 successes (17.65%). Tiny 0.6B model is a severe utility confound; join orphan rate was 86.92%. |
+| 4 — detectors | Per-task-type allowlist, tool/syscall n-grams, held-out task split, FPR thresholds and FP-cause output exist. | Evaluated on the refreshed corpus. N-gram produced 3/30 held-out benign FPs (10%); low utility and coarse calibration limit interpretation. |
+| 5 — injection suite | Seven local YAML cases, fake canary sink, goal recording, keyword classifier and detector integration. | All seven cases ran, but no attack goal succeeded. Taxonomy remains pending; prompt keyword baseline flagged 7/7. |
+| 6 — adaptive mimicry | Four deterministic profiles and per-strategy reporting. | Four of four local canary goals succeeded. Two adaptive profiles evaded both detectors in one run each; results are controlled probes, not population estimates. |
+| 7 — taxonomy and ablations | Operational taxonomy, five feature ablations, metrics and SVG plot generation. | All seven injection labels remain pending. Ablations ran; goal-failure detector flags are not successful-attack TPR. Blocking utility is unmeasured. |
+| 8 — release and writeup | README, license, VM reproduction script, environment/threat-model docs and paper skeleton. | Phases 0–7 ran in disposable KVM guests using a verified cached model. Blank-VM reproduction from README and successful injection taxonomy remain open. |
 
 Detailed phase records are in `docs/notes/phase0.md` through
 `docs/notes/phase8.md`. The workshop draft is `docs/paper/WORKSHOP_DRAFT.md`.
 
 ## Current corpus and campaign mismatch
 
-The current benign task directory contains 34 YAML definitions. The 90-run
-historical dataset predates four of them (three mixed file-read/fetch tasks and
-one three-fetch task). Consequently, the current task code can build more
-matched behavior profiles than the historical benign data can validate. The
-historical fetch task type had no successful tool calls, which means its
-observed “benign envelope” is empty for HTTP behavior. The measured one-call
-adaptive profile therefore was not shown to mimic a functioning benign fetch.
+The current benign task directory contains 34 YAML definitions. The refreshed
+corpus includes all 34 tasks and all three seeds, but its fetch task type had
+only 3/30 successes and mean sequence length 0.47. The adaptive padding result
+is therefore not a calibrated imitation of a stable, successful fetch
+sequence. The workspace-scope result uses an in-scope note and a task type with
+successful benign runs, but remains a single controlled attempt.
 
-The saved Phase 6 manifest and summary contain two deterministic runs. They
-predate the sequence-padded and workspace-file-scope profiles. Do not quote
-those two runs as results for all four current strategies.
+The refreshed Phase 6 campaign measured all four current strategies once each.
+Its adaptive file-scope and sequence-padding cases evaded both baselines, while
+the naive and one-call adaptive cases were flagged. Do not generalize four
+deterministic runs into an attacker success or detection rate.
 
 ## Latest execution constraint
 
@@ -60,6 +60,51 @@ Tripwire service ran stale guest code and reported
 `check_env.py: error: unrecognized arguments: --lock-path config/environment.lock.json`.
 That is a base-image reuse incompatibility, not a Phase 3 outcome. Both new
 overlays remain ignored under `data/vm/`.
+
+The custom-base failure exposed that an inherited `tripwire-phase0.service`
+could run before the new repository archive was installed. Commit `32841f8`
+adds an early cloud-init `bootcmd` that disables that one-shot unit before
+`runcmd` replaces the tree and enables the current unit. Cloud-init documents
+`bootcmd` as an early boot module; see the
+[cloud-init module reference](https://cloudinit.readthedocs.io/en/latest/reference/modules.html#bootcmd).
+The fix was exercised on a fresh overlay backed by the cached-model guest: the
+current repo was fetched, all 192 tests passed, and both smoke suites completed.
+
+The 2 GiB Phase 3 retry completed 39 of 102 task attempts, then the live host
+memory guard stopped the guest at `MemAvailable=4055 MiB; need at least 4096
+MiB`. It returned no complete bundle and was discarded as a corpus. A fresh
+retry with 1,536 MiB guest RAM and 1,024 MiB guest-only swap completed all 34
+tasks × 3 seeds under KVM. It used the cached, digest-verified Ollama 0.40.7
+`qwen3:0.6b-q4_K_M` model, source commit `32841f8`, and the generation settings
+in `config/model.tiny.json`. Task success was 18/102 (17.65%). Success by type:
+edit 9/18, fetch 3/30, search 0/18, summarize 6/18, and tests 0/18. The join
+assigned 188 of 1,582 behavioral events, orphaned 1,375 (86.92%), and marked
+19 ambiguous; 2,390 stats snapshots were outside the behavioral denominator.
+These are current measured results, with severe model-utility and join-quality
+confounds.
+
+Phases 4–7 then ran in a new overlay over that exact corpus. All seven Phase 5
+injection cases completed but achieved zero goals. The keyword baseline flagged
+7/7 attack prompts and 0/34 benign prompts. On the seven unsuccessful attack
+rows, the allowlist and sequence baselines each flagged 1/7; this is not
+successful-attack TPR. Phase 6's four controlled canary strategies all reached
+their local goals. Naive shell and one-call adaptive cases were flagged by both
+detectors; file-scope and padding cases evaded both at 1% and 5% thresholds.
+Each strategy was run once. The padding sequence was not calibrated to a
+successful benign sequence. Held-out n-gram FPs were 3/30 (10%), all three
+seeds of `edit-02`; the allowlist had 0/30. Phase 7 generated five ablations,
+but all seven injection taxonomy cases remain pending because their goals
+failed. The ablation flags on those failed cases are not successful-attack
+detection rates. Blocking utility is not measured because the monitor does
+not enforce.
+
+Commit `a06a775` now retains provenance per overlay and keeps
+`data/vm/provenance.json` as a latest-run pointer. The Phase 3 and Phase 5–7
+run provenance files were reconstructed from the exact launcher commands and
+manifests because the earlier implementation overwrote the single pointer;
+they are explicitly marked as reconstructed. A new Phase 0–2 acceptance run
+after the provenance change passed all 193 tests and repeated the 231-event,
+zero-drop tracer smoke.
 
 On 2026-10-29, a fresh Phase 3 launch was attempted through the repository's
 QEMU runner with a 2,048 MiB guest. The runner refused before VM boot:
@@ -97,7 +142,8 @@ execution failure; it does not prove the full agent/BPF workload under TCG.
 
 The runner now has an explicit `--qemu-accel tcg` option. KVM remains the
 default; the selected acceleration and exact QEMU arguments are recorded in
-`data/vm/provenance.json`. TCG is substantially slower and may affect model
+`data/vm/provenance-<overlay>.json`; `data/vm/provenance.json` points to the
+latest run. TCG is substantially slower and may affect model
 task success and timing, so its measurements must remain identified as TCG
 runs rather than pooled silently with KVM data. No corpus run has yet been
 completed with this option.
@@ -223,21 +269,23 @@ preserve their config/model locks and inspect the phase notes before use.
 
 ## Remaining research work
 
-1. Run the 34-task corpus with the documented pinned model on a host that
-   meets the VM memory guard. Record task success, model lock, join quality,
-   and per-type variability. Keep unsuccessful tasks in the sample.
-2. Rerun Phase 6 with the same refreshed benign corpus and all four strategies.
-   Report success and detector rates per strategy at fixed FPR, and describe
-   whether each matching benign behavior was actually observed.
-3. Obtain useful local-agent success on injection tasks, then rerun Phase 5
-   and classify only successful, calibrated cases in Phase 7.
-4. Rerun detector and ablation evaluation using a task-held-out split and log
-   every false positive cause.
-5. Measure blocking utility only if enforcement is implemented; current
-   Tripwire records and scores but does not block.
-6. Reproduce from a fresh VM using only the README instructions, retain exact
-   environment/model locks, and update the paper from measured—not inferred—
-   results.
+1. Improve the tool-to-event join: the refreshed corpus orphaned 86.92% of
+   behavioral events, which weakens claims based on missing or attributed
+   activity.
+2. Repeat with a model profile that completes a useful share of tasks, then
+   rerun the same benign and attack suites with recorded model locks.
+3. Achieve and independently verify injection goals in the controlled local
+   harness before assigning OS-visible, partially visible, or OS-invisible
+   labels. Keep the current seven cases pending until then.
+4. Repeat adaptive strategies across seeds and calibrate mimicry against
+   successful benign behavior; the current four one-run wrapper probes are
+   demonstrations, and padding is not calibrated.
+5. Measure task utility under blocking only if an enforcement mode is added;
+   the current monitor records and scores without blocking.
+6. Reproduce the full pipeline from a blank VM using only README instructions.
+   Current full runs reused a cached-model base.
+7. Refresh the workshop draft and release artifacts after those measurements;
+   do not promote current smoke outcomes to generalized effectiveness claims.
 
 ## Change history pointers
 

@@ -28,22 +28,41 @@
 
 ## Measured implementation status
 
-The accepted guest completed Phase 3 with the explicit tiny profile:
-`qwen3:0.6b-q4_K_M`, Ollama 0.40.7, 90 runs, 15 successful tasks (16.7%).
-Phase 5 ran seven injections with zero successful goals. Phase 6 reached both
-fake-canary goals and both detectors flagged both examples; this was not an
-in-envelope evasion because all 18 benign fetch runs had zero calls. Phase 7
-produced five ablations, a plot, and seven pending taxonomy rows. See the
-phase-specific notes for exact FPR, orphan, and ablation counts.
+The 2026-11-01 refreshed corpus contains 34 tasks × 3 seeds (102 attempts)
+and 18 successful checks (17.65%) using the pinned `qwen3:0.6b-q4_K_M`
+profile. All seven injection goals failed. Four deterministic wrapper probes
+reached their local fake-canary goals; two were not flagged, but this is only a
+single-run controlled probe and the padding profile was not calibrated to
+successful benign behavior. All taxonomy labels remain pending. The fresh
+corpus join orphan rate was 86.92%. See the phase notes and `reports.md` for
+measured counts and their limits.
 
-`scripts/reproduce.sh` now accepts `GUEST_SWAP_MIB` so the measured 1 GiB RAM +
-3 GiB guest-swap profile can be requested explicitly. The default 8B profile
-and a clean-launcher full reproduction have not been rerun end-to-end in this
-turn. Three attempts with the pinned 1.7B profile produced no result bundle;
-two hit the live memory guard and the 1 GiB attempt was stopped at 9.5 GiB
-free host storage (99% used). The exact readings are in `docs/notes/phase3.md`. `make check` on the development host fails as designed because it is
-Arch rather than Ubuntu 24.04 and lacks guest detection, `clang-18`,
-`bpftool`, and `dpkg-query`; the disposable guest ran its own check and tests.
-The research question therefore remains only partially answered: a capable
-model corpus, successful injections, a successful in-envelope evasion, and
-blocking utility measurements are still needed.
+The development host does not satisfy the guest environment checks, so
+acceptance is evidenced by the disposable Ubuntu guest, not a host-side
+`make check`. Full Phases 3–7 used a cached-model guest base. A blank-VM
+end-to-end README reproduction, a useful-utility corpus, successful injected
+goals, repeated calibrated adaptive campaigns, and blocking utility remain
+open research/release work.
+
+## Refreshed release status (2026-11-01)
+
+The current source completed Phase 0–2 smoke acceptance, a full 34-task Phase
+3 corpus, and Phases 4–7 evaluations in disposable KVM guest overlays. The
+corpus used the explicit tiny model profile and achieved 18/102 task checks
+(17.65%). All seven injection goals failed; four deterministic wrapper probes
+achieved their local canary goals, with two observed detector evasions. The
+latter are single-run probes, and one padding strategy was not calibrated to
+successful benign sequence behavior. All injection taxonomy labels remain
+pending. See `reports.md` for the measured tables and `progress.md` for
+remaining research work.
+
+The full-pipeline guest runs reused a cached, previously provisioned model
+base, so they do not establish a fresh-VM reproduction from the README. The
+runner now disables an inherited one-shot guest service in cloud-init's early
+`bootcmd`, before installing the current repository archive. It also writes
+immutable `provenance-<overlay>.json` records alongside the compatibility
+`provenance.json` latest-run pointer, preventing later overlays from
+silently replacing prior-run provenance. Earlier Phase 3 and Phase 5–7
+provenance files were reconstructed from the saved invocation and manifests
+and are marked as reconstructed. A blank-VM end-to-end reproduction remains
+open.
