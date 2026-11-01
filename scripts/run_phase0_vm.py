@@ -126,6 +126,21 @@ def cloud_init_bootstrap_command(swap_mib=0):
         'systemctl start --no-block tripwire-phase0.service')
 
 
+def cloud_init_config(write_files, swap_mib=0):
+    """Build cloud-config, disabling inherited one-shot units before runcmd."""
+    return {
+        'package_update': False,
+        'package_upgrade': False,
+        'write_files': write_files,
+        # Reused provisioned images may still have a previous run's unit
+        # enabled. Disable it in cloud-init's early boot stage before the
+        # bootstrap replaces /opt/tripwire and starts the current acceptor.
+        'bootcmd': [['bash', '-c',
+                     'systemctl disable --now tripwire-phase0.service || true']],
+        'runcmd': [['bash', '-c', cloud_init_bootstrap_command(swap_mib)]],
+    }
+
+
 def nocloud_seed_qemu_args(seed_iso):
     """Attach cloud-init data locally so locked-down guests can still boot."""
     return ['-drive', f'file={seed_iso},media=cdrom,readonly=on',
@@ -703,9 +718,7 @@ systemctl poweroff
     ]
     if options.phase3:
         write_files.extend(phase3_model_seed_files(phase3_model_config, phase3_model_lock))
-    config = {'package_update': False, 'package_upgrade': False,
-              'write_files': write_files,
-              'runcmd': [['bash', '-c', cloud_init_bootstrap_command(swap_mib)]]}
+    config = cloud_init_config(write_files, swap_mib)
     handler = functools.partial(SimpleHTTPRequestHandler, directory=str(seed))
     server = ThreadingHTTPServer(('127.0.0.1', 0), handler)
     port = server.server_address[1]

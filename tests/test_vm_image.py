@@ -69,6 +69,14 @@ class ImageVerificationTests(unittest.TestCase):
         self.assertLess(command.index('ufw --force reset'),
                         command.index('10.0.2.2:PORT/repo.tar'))
 
+    def test_cloud_init_disables_inherited_tripwire_unit_before_bootstrap(self):
+        config = vm.cloud_init_config([])
+
+        self.assertIn('systemctl disable --now tripwire-phase0.service || true',
+                      config['bootcmd'][0][2])
+        self.assertIn('tar -xf /root/repo.tar', config['runcmd'][0][2])
+        self.assertLess(list(config).index('bootcmd'), list(config).index('runcmd'))
+
     def test_cloud_init_bootstrap_can_enable_only_guest_swap(self):
         command = vm.cloud_init_bootstrap_command(swap_mib=1024)
 
