@@ -138,15 +138,18 @@ class ImageVerificationTests(unittest.TestCase):
              'config/model.tcg-diagnostic.lock.json').read_text())
 
     def test_phase3_model_config_can_be_seeded_before_first_model_install(self):
-        config_root = Path(__file__).resolve().parents[1] / 'config'
-        with tempfile.TemporaryDirectory(dir=config_root) as directory:
-            config_file = Path(directory) / 'model.unlocked.json'
+        with tempfile.TemporaryDirectory() as directory:
+            repo_root = Path(directory)
+            config_root = repo_root / 'config'
+            config_root.mkdir()
+            config_file = config_root / 'model.unlocked.json'
             lock_file = config_file.with_name('model.unlocked.lock.json')
             config_file.write_text('{}')
 
-            files = vm.phase3_model_seed_files(
-                config_file.relative_to(vm.ROOT),
-                lock_file.relative_to(vm.ROOT))
+            with patch.object(vm, 'ROOT', repo_root):
+                files = vm.phase3_model_seed_files(
+                    config_file.relative_to(repo_root),
+                    lock_file.relative_to(repo_root))
 
         self.assertEqual([item['path'] for item in files],
                          ['/root/phase3-model-config.json'])
